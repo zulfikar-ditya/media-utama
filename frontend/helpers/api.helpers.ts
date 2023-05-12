@@ -4,6 +4,7 @@ import Cookies from 'js-cookie';
 import Router from 'next/router';
 import { token_cookie_name, loginPath, basePath } from './middleware.helpers';
 import fileDownload from 'js-file-download';
+import { Decrypt } from './encryption.helpers';
 
 // =========================>
 // ## type of filter params
@@ -39,6 +40,17 @@ export type getProps = {
 };
 
 // =========================>
+// ## filter type value
+// =========================>
+export const getFilterTypeValue = {
+  equal: 'eq',
+  notEqual: 'ne',
+  in: 'in',
+  notIn: 'ni',
+  range: 'bw',
+};
+
+// =========================>
 // ## get function
 // =========================>
 export const get = async ({
@@ -56,19 +68,35 @@ export const get = async ({
 
   if (!fetchHeaders.Authorization) {
     if (bearer) {
-      fetchHeaders.Authorization = `bearer ${bearer}`;
+      fetchHeaders.Authorization = `Bearer ${bearer}`;
     } else if (Cookies.get(token_cookie_name)) {
-      fetchHeaders.Authorization = `bearer ${Cookies.get(token_cookie_name)}`;
+      fetchHeaders.Authorization = `Bearer ${Decrypt(
+        Cookies.get(token_cookie_name)
+      )}`;
     }
   }
 
-  const fetch = await axios.get(fetchUrl, {
-    headers: fetchHeaders,
-    params: {
-      ...params,
-      ...includeParams,
-    },
-  });
+  const filter: Record<string, any> = {};
+  if (params?.filter) {
+    params?.filter?.map((val) => {
+      filter[val.column as keyof object] = `${
+        getFilterTypeValue[val.type as keyof object]
+      }:${val.value}`;
+    });
+  }
+
+  await axios.get(process.env.NEXT_PUBLIC_CSRF_URL || '');
+  const fetch = await axios
+    .get(fetchUrl, {
+      headers: fetchHeaders,
+      params: {
+        ...params,
+        ...includeParams,
+        filter: params?.filter ? JSON.stringify(filter) : '',
+      },
+    })
+    .then((res) => res)
+    .catch((err) => err.response);
 
   if (fetch.status == 401) {
     Router.push(loginPath);
@@ -82,7 +110,7 @@ export const get = async ({
 // =========================>
 // ## get hook function
 // =========================>
-export const useGet = (props: getProps) => {
+export const useGet = (props: getProps, sleep?: boolean) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [refresh, setRefresh] = useState<boolean>(false);
   const [code, setCode] = useState<number | null>(null);
@@ -101,7 +129,7 @@ export const useGet = (props: getProps) => {
       }
     };
 
-    if (props.path || props.url) {
+    if (!sleep && (props.path || props.url)) {
       fetch();
     }
 
@@ -116,7 +144,7 @@ export const useGet = (props: getProps) => {
     props.params?.sortDirection,
     props.params?.filter,
     props.includeParams,
-    props.includeHeaders,
+    // props.includeHeaders,
     props.bearer,
     refresh,
   ]);
@@ -158,9 +186,11 @@ export const post = async ({
 
   if (!fetchHeaders.Authorization) {
     if (bearer) {
-      fetchHeaders.Authorization = `bearer ${bearer}`;
+      fetchHeaders.Authorization = `Bearer ${bearer}`;
     } else if (Cookies.get(token_cookie_name)) {
-      fetchHeaders.Authorization = `bearer ${Cookies.get(token_cookie_name)}`;
+      fetchHeaders.Authorization = `Bearer ${Decrypt(
+        Cookies.get(token_cookie_name)
+      )}`;
     }
   }
 
@@ -184,7 +214,7 @@ export const post = async ({
   if (fetch.status == 401) {
     Router.push(loginPath);
   } else if (fetch.status == 403) {
-    Router.push(basePath);
+    // Router.push(basePath);
   } else {
     return fetch;
   }
@@ -250,9 +280,11 @@ export const patch = async ({
 
   if (!fetchHeaders.Authorization) {
     if (bearer) {
-      fetchHeaders.Authorization = `bearer ${bearer}`;
+      fetchHeaders.Authorization = `Bearer ${bearer}`;
     } else if (Cookies.get(token_cookie_name)) {
-      fetchHeaders.Authorization = `bearer ${Cookies.get(token_cookie_name)}`;
+      fetchHeaders.Authorization = `Bearer ${Decrypt(
+        Cookies.get(token_cookie_name)
+      )}`;
     }
   }
 
@@ -344,9 +376,11 @@ export const destroy = async ({
 
   if (!fetchHeaders.Authorization) {
     if (bearer) {
-      fetchHeaders.Authorization = `bearer ${bearer}`;
+      fetchHeaders.Authorization = `Bearer ${bearer}`;
     } else if (Cookies.get(token_cookie_name)) {
-      fetchHeaders.Authorization = `bearer ${Cookies.get(token_cookie_name)}`;
+      fetchHeaders.Authorization = `Bearer ${Decrypt(
+        Cookies.get(token_cookie_name)
+      )}`;
     }
   }
 
@@ -433,9 +467,11 @@ export const download = async ({
 
   if (!fetchHeaders.Authorization) {
     if (bearer) {
-      fetchHeaders.Authorization = `bearer ${bearer}`;
+      fetchHeaders.Authorization = `Bearer ${bearer}`;
     } else if (Cookies.get(token_cookie_name)) {
-      fetchHeaders.Authorization = `bearer ${Cookies.get(token_cookie_name)}`;
+      fetchHeaders.Authorization = `Bearer ${Decrypt(
+        Cookies.get(token_cookie_name)
+      )}`;
     }
   }
 
